@@ -1,41 +1,17 @@
-import PySimpleGUI as sg
+import PyForms
+from abc import ABC, abstractmethod
 from docx import Document
 from openpyxl import Workbook
-from abc import ABC, abstractmethod
 
 class BankService(ABC):
     def __init__(self, amount, rate, term):
-        self._amount = amount
-        self._rate = rate
-        self._term = term
+        self.amount = amount
+        self.rate = rate
+        self.term = term
 
     @abstractmethod
     def calculate(self):
         pass
-
-    @property
-    def amount(self):
-        return self._amount
-
-    @amount.setter
-    def amount(self, value):
-        self._amount = value
-
-    @property
-    def rate(self):
-        return self._rate
-
-    @rate.setter
-    def rate(self, value):
-        self._rate = value
-
-    @property
-    def term(self):
-        return self._term
-
-    @term.setter
-    def term(self, value):
-        self._term = value
 
 class CreditService(BankService):
     def calculate(self):
@@ -72,36 +48,48 @@ def save_to_xls(result):
     ws['B1'] = result
     wb.save('результат.xlsx')
 
-layout = [
-    [sg.Text('Выберите услугу:'), sg.Combo(['Кредит', 'Рассрочка', 'Вклад'], key='-SERVICE-')],
-    [sg.Text('Введите сумму:'), sg.Input(key='-AMOUNT-')],
-    [sg.Text('Введите процентную ставку:'), sg.Input(key='-RATE-')],
-    [sg.Text('Введите срок (в месяцах):'), sg.Input(key='-TERM-')],
-    [sg.Button('Рассчитать'), sg.Button('Сохранить'), sg.Button('Выход')]
-]
+app = PyForms.App()
 
-window = sg.Window('Банковские услуги', layout)
-service = None
+class BankForm(PyForms.Form):
+    def __init__(self):
+        super().__init__(title='Банковские услуги')
 
-while True:
-    event, values = window.read()
-    if event == sg.WINDOW_CLOSED or event == 'Выход':
-        break
-    elif event == 'Рассчитать':
-        if values['-SERVICE-'] == 'Кредит':
-            service = CreditService(float(values['-AMOUNT-']), float(values['-RATE-']), int(values['-TERM-']))
-        elif values['-SERVICE-'] == 'Рассрочка':
-            service = InstallmentService(float(values['-AMOUNT-']), float(values['-RATE-']), int(values['-TERM-']))
-        elif values['-SERVICE-'] == 'Вклад':
-            service = DepositService(float(values['-AMOUNT-']), float(values['-RATE-']), int(values['-TERM-']))
-        result = service.calculate()
-        sg.popup('Результат: ', result)
-    elif event == 'Сохранить':
-        if service is not None:
-            save_to_doc(result)
-            save_to_xls(result)
-            sg.popup('Результат сохранен.')
-        else:
-            sg.popup('Рассчитайте результаты перед сохранением.')
-window.close()
+        self.service_type = PyForms.Dropdown('Выберите услугу', ['Кредит', 'Рассрочка', 'Вклад'])
+        self.amount = PyForms.FloatInput('Введите сумму', default=0)
+        self.rate = PyForms.FloatInput('Введите процентную ставку', default=0)
+        self.term = PyForms.IntInput('Введите срок (в месяцах)', default=0)
 
+        self.calculate_button = PyForms.Button('Рассчитать')
+        self.save_button = PyForms.Button('Сохранить')
+        self.exit_button = PyForms.Button('Выход')
+
+        self.result = PyForms.Label('Результат')
+
+        self.layout = [
+            [self.service_type, self.amount, self.rate, self.term],
+            [self.calculate_button, self.save_button, self.exit_button],
+            [self.result]
+        ]
+
+    def button_event(self, event):
+        if event == 'Рассчитать':
+            if self.service_type.value == 'Кредит':
+                service = CreditService(self.amount.value, self.rate.value, self.term.value)
+            elif self.service_type.value == 'Рассрочка':
+                service = InstallmentService(self.amount.value, self.rate.value, self.term.value)
+            elif self.service_type.value == 'Вклад':
+                service = DepositService(self.amount.value, self.rate.value, self.term.value)
+            result = service.calculate()
+            self.result.value = result
+        elif event == 'Сохранить':
+            if service is not None:
+                save_to_doc(result)
+                save_to_xls(result)
+                self.result.value = 'Результат сохранен.'
+            else:
+                self.result.value = 'Рассчитайте результаты перед сохранением.'
+        elif event == 'Выход':
+            app.exit()
+
+app.add_form(BankForm)
+app.main()
