@@ -14,7 +14,7 @@
 ![img_3.png](img_3.png)
 
 1. Спроектированная с использованием crow's foot notation БД:   
-![img_4.png](img_4.png)
+![image](https://github.com/sosad234/PythonProg/assets/144006168/b1d5d2ef-6fa5-4e4f-b19b-51f0da1df4ab)
 
 2. Таблицы БД были созданы с помощью сервиса [Mockaroo](https://www.mockaroo.com/)   
    - Таблица `accounts`    
